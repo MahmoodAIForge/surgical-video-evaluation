@@ -1,9 +1,8 @@
 import streamlit as st
-import random
 import httpx
 from datetime import datetime
 
-st.set_page_config(page_title="Surgical Video Evaluation", layout="wide", page_icon="🏥")
+st.set_page_config(page_title="Clinical Video Evaluation", layout="wide", page_icon="🏥")
 
 SUPABASE_URL = "https://jkfdxwhusxpfojvsqtlv.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprZmR4d2h1c3hwZm9qdnNxdGx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4ODI4MjMsImV4cCI6MjA4OTQ1ODgyM30.0oUmlIWgCbVjK2Yqne6AnGiEd3LoqIhucmnGTxFJ5-U"
@@ -11,46 +10,49 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 st.markdown("""
 <style>
 [data-testid="stAppViewContainer"] { background: #f0f4f8; }
-.header-bar { background: linear-gradient(90deg,#1e3a5f,#2563eb); padding:14px 24px; border-radius:10px;
-               color:white; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-.vid-label { text-align:center; font-weight:700; font-size:1.1rem; padding:6px;
-              border-radius:6px; margin-bottom:6px; }
-.lbl-a { background:#dbeafe; color:#1e40af; }
-.lbl-b { background:#dcfce7; color:#166534; }
+.header-bar { background: linear-gradient(90deg,#0f2b46,#1a5276); padding:16px 28px; border-radius:10px;
+               color:white; display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+.header-bar h2 { margin:0; font-size:1.6rem; letter-spacing:0.3px; }
+.header-bar p { margin:3px 0 0; opacity:.8; font-size:.88rem; }
 .rating-header { display:grid; grid-template-columns:2fr 1fr 1fr;
                   gap:8px; font-weight:700; font-size:0.85rem; color:#475569;
-                  padding:6px 10px; border-bottom:2px solid #e2e8f0; margin-bottom:4px; }
-div[data-testid="stForm"] { background:white; padding:16px; border-radius:10px;
-                              box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+                  padding:8px 12px; border-bottom:2px solid #cbd5e1; margin-bottom:6px; }
+div[data-testid="stForm"] { background:white; padding:18px; border-radius:10px;
+                              box-shadow:0 1px 6px rgba(0,0,0,0.07); }
+.info-card { background:#ffffff; border:1px solid #e2e8f0; border-radius:10px;
+              padding:18px; margin-bottom:14px; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+.step-num { display:inline-block; background:#1a5276; color:white; width:26px; height:26px;
+             border-radius:50%; text-align:center; line-height:26px; font-weight:700; font-size:0.85rem; margin-right:8px; }
 </style>
 """, unsafe_allow_html=True)
 
+# Combined videos hosted on Google Drive — UPDATE these IDs after uploading combined videos
 VIDEOS = {
-    "Blood_Sucking_100813_VID005": {"original": "https://drive.google.com/file/d/156hCT5sOOGlVZZ9bHGN-3SaaAIjqQcSP/preview", "inpainted": "https://drive.google.com/file/d/1W4K2ynUwbfEuDDsboImOqQKv4j1KUYDM/preview", "category": "Blood Sucking"},
-    "Bleeding_100813_VID005": {"original": "https://drive.google.com/file/d/1nhchHUosO-Apkgf7ResMkNOK0BuRyZJ6/preview", "inpainted": "https://drive.google.com/file/d/1GezkgqplwTv37NBqxsdcBJ9GH_oLGeZd/preview", "category": "Bleeding"},
-    "Bleeding_122315_VID002": {"original": "https://drive.google.com/file/d/1RAi1kXbMJQ1YXitY7q1jx7hXIbgqgJxP/preview", "inpainted": "https://drive.google.com/file/d/1E302xDNL2cT4QvXuIhgeHDGsha-12Txq/preview", "category": "Bleeding"},
-    "Dissection_152123_VID005": {"original": "https://drive.google.com/file/d/1yrlMHqvQOUjjPwxDiZWN6ITz-EXFASh_/preview", "inpainted": "https://drive.google.com/file/d/102dq-3qBZGRDAH1Rb5_Lxxk1kKnJ0tW6/preview", "category": "Dissection"},
-    "Dissection1_142147_VID002": {"original": "https://drive.google.com/file/d/1wSDTy1Pg_KSXpJEddlQ-uglE0iK76m4P/preview", "inpainted": "https://drive.google.com/file/d/1qJv--2DzcKGNmu1NoFbYnsLgLyrVqRw6/preview", "category": "Dissection"},
-    "Landmarking_115418_VID001": {"original": "https://drive.google.com/file/d/1HflnizmwOqj0kHPgn9MPlDldq07rkCT1/preview", "inpainted": "https://drive.google.com/file/d/1ux2CMmHBLIP_eCQAFth4mjyH6ICetbXr/preview", "category": "Landmarking"},
-    "Landmarking_115418_VID001_Trim2": {"original": "https://drive.google.com/file/d/14x9xX4m_h8YTN9vxcxWIMfQegYw_SZNr/preview", "inpainted": "https://drive.google.com/file/d/1s4oSoluMhrOxJ8p5fBChsMT1i2ZCGL7U/preview", "category": "Landmarking"},
-    "Landmarking_152123_VID002": {"original": "https://drive.google.com/file/d/1IPEkppS00X9popQD2fBm32M5ZF2dVbjv/preview", "inpainted": "https://drive.google.com/file/d/1EILr5f_QzwDEHQTRMeViF0AfifxzXuq1/preview", "category": "Landmarking"},
-    "Setup_100813_VID001": {"original": "https://drive.google.com/file/d/1m8ABYyWfbpzd548cM4V6IryWyyCyzCRQ/preview", "inpainted": "https://drive.google.com/file/d/18se2rOGAI4pisdZ_Su-QdjRbu-U35PP1/preview", "category": "Setup"},
-    "Setup_115418_VID001": {"original": "https://drive.google.com/file/d/1WHrHbucP2L-eLREzUyYZMeYECvF-D2PR/preview", "inpainted": "https://drive.google.com/file/d/1c5I2_25ol6YKbl6kGsTKqRIU8_pfQc5S/preview", "category": "Setup"},
-    "Setup_152123_VID002": {"original": "https://drive.google.com/file/d/1BzinCPGpKjOnedf0wij0_PVjniYyVpV5/preview", "inpainted": "https://drive.google.com/file/d/1yas0kjzvf8AE5FLWyC-6OMG-32L2VRAl/preview", "category": "Setup"},
-    "Setup1_162147_VID001": {"original": "https://drive.google.com/file/d/1GIZZYbGGUpPvHKDa_QLronbsHInAuzU9/preview", "inpainted": "https://drive.google.com/file/d/1Duy24DHSueylbHafhE8mC5-kjuc7OryB/preview", "category": "Setup"},
-    "Setup1_162147_VID001_Trim2": {"original": "https://drive.google.com/file/d/1SJKziPOqqn6SMgMXgPwngb2DbD2VugAo/preview", "inpainted": "https://drive.google.com/file/d/1RltbU_VnAVOwyxCJOaUmFtISWoVRQ3ce/preview", "category": "Setup"},
-    "Suturing_152123_VID008": {"original": "https://drive.google.com/file/d/1cMaoXTaLraBfpJeTSagvV3M4UBLkPDMf/preview", "inpainted": "https://drive.google.com/file/d/14jLmr7KF38jJ-LP7bhzn99T2hb2qfzKc/preview", "category": "Suturing"},
-    "Suturing_152123_VID009": {"original": "https://drive.google.com/file/d/1bsjCvPfpk-XQgaCzMz6jANSwTfxpBjgf/preview", "inpainted": "https://drive.google.com/file/d/1aY6EOmJ-VjEtb0aPFE8wvOUbZN7Zhu7z/preview", "category": "Suturing"},
-    "Suturing_152123_VID011": {"original": "https://drive.google.com/file/d/18Y28VXrHIkT9cLd6DpZgxITobPSkDFeJ/preview", "inpainted": "https://drive.google.com/file/d/1QA2ddCJXhVftAyavxVWbdEulvBHujhZ8/preview", "category": "Suturing"},
-    "Suturing1_110128_VID005": {"original": "https://drive.google.com/file/d/11pP9XOcKLgH0zrhpjXzCwiQHmm8U-Op1/preview", "inpainted": "https://drive.google.com/file/d/1AWcdTb3iWac5GPOMBL7hD_2OWwdaskP0/preview", "category": "Suturing"},
+    "Blood_Sucking_100813_VID005": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Blood Sucking"},
+    "Bleeding_100813_VID005": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Bleeding"},
+    "Bleeding_122315_VID002": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Bleeding"},
+    "Dissection_152123_VID005": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Dissection"},
+    "Dissection1_142147_VID002": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Dissection"},
+    "Landmarking_115418_VID001": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Landmarking"},
+    "Landmarking_115418_VID001_Trim2": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Landmarking"},
+    "Landmarking_152123_VID002": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Landmarking"},
+    "Setup_100813_VID001": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Setup"},
+    "Setup_115418_VID001": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Setup"},
+    "Setup_152123_VID002": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Setup"},
+    "Setup1_162147_VID001": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Setup"},
+    "Setup1_162147_VID001_Trim2": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Setup"},
+    "Suturing_152123_VID008": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Suturing"},
+    "Suturing_152123_VID009": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Suturing"},
+    "Suturing_152123_VID011": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Suturing"},
+    "Suturing1_110128_VID005": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Suturing"},
 }
 
 CRITERIA = [
-    ("specular_severity",    "🔆 Specular Severity",    "Reflections obstructing the field?"),
-    ("tissue_visibility",    "🔬 Tissue Visibility",     "Underlying tissue clarity?"),
-    ("visual_naturalness",   "🎨 Visual Naturalness",    "Realistic, artifact-free?"),
-    ("temporal_consistency", "⏱️ Temporal Consistency", "Smooth, no flickering?"),
-    ("clinical_confidence",  "✅ Clinical Confidence",   "Confidence performing procedure?"),
+    ("specular_severity",    "🔆 Specular Reflection Severity",  "To what extent do specular reflections obstruct the surgical field of view?"),
+    ("tissue_visibility",    "🔬 Tissue Visibility",              "How clearly are the underlying tissue structures and anatomy visible?"),
+    ("visual_naturalness",   "🎨 Visual Naturalness",             "Does the image appear clinically realistic, without visible artifacts or colour distortion?"),
+    ("temporal_consistency", "⏱️ Temporal Consistency",           "Is the video temporally stable, free of flickering or inter-frame discontinuities?"),
+    ("clinical_confidence",  "✅ Clinical Confidence",            "How confident would you feel making clinical decisions based on this visual quality?"),
 ]
 
 def save_to_supabase(row):
@@ -59,113 +61,183 @@ def save_to_supabase(row):
     r = httpx.post(f"{SUPABASE_URL}/rest/v1/evaluations", headers=hdrs, json=row)
     return r.status_code in [200, 201]
 
-for k, v in {"page":"login","evaluator":{},"assignments":{},"responses":[],"current_video":0}.items():
+for k, v in {"page":"login","evaluator":{},"responses":[],"current_video":0}.items():
     if k not in st.session_state: st.session_state[k] = v
 
+# ── LOGIN ────────────────────────────────────────────────────
 def login_page():
-    st.markdown('''<div class="header-bar">
-        <div><h2 style="margin:0">🏥 Surgical Video Evaluation</h2>
-        <p style="margin:2px 0 0;opacity:.85;font-size:.9rem">AI Specular Reflection Removal — Clinical Validation</p></div>
-    </div>''', unsafe_allow_html=True)
+    st.markdown("""<div class="header-bar">
+        <div><h2>🏥 Specular Reflection Removal</h2>
+        <p>Clinical Evaluation of Endoscopic Video Enhancement</p></div>
+    </div>""", unsafe_allow_html=True)
+
     _, col, _ = st.columns([1,1.6,1])
     with col:
-        st.markdown('''<div style="background:#eff6ff;border-left:4px solid #2563eb;padding:12px;border-radius:6px;margin-bottom:16px;font-size:.95rem">
-        You will evaluate <b>17 video pairs</b> — same scene, possibly different processing.<br>
-        ⏱️ <b>~20 min</b> &nbsp;|&nbsp; 🔒 Fully blinded &nbsp;|&nbsp; 💾 Auto-saved</div>''', unsafe_allow_html=True)
-        with st.form("login", border=True):
-            name = st.text_input("Full Name *", placeholder="Dr. John Smith")
-            c1, c2 = st.columns(2)
-            with c1: specialty = st.selectbox("Specialty", ["Colorectal Surgery","General Surgery","Gastroenterology","Urology","Gynecology","ENT","Other"])
-            with c2: experience = st.selectbox("Experience", ["<5 yrs","5–10 yrs","10–20 yrs",">20 yrs"])
-            institution = st.text_input("Institution", placeholder="Royal London Hospital")
-            if st.form_submit_button("Begin →", type="primary", use_container_width=True):
-                if not name.strip(): st.error("Please enter your name.")
-                else:
-                    st.session_state.evaluator = {"name":name.strip(),"specialty":specialty,"experience":experience,"institution":institution,"timestamp":datetime.now().isoformat()}
-                    st.session_state.assignments = {v:{"swap":random.random()>.5} for v in VIDEOS}
-                    st.session_state.page = "instructions"; st.rerun()
+        st.markdown("""<div class="info-card">
+        <p style="font-size:0.95rem;margin:0">
+        Thank you for participating in this clinical evaluation study. You will be presented with
+        a series of endoscopic surgical video recordings, each displayed as a side-by-side comparison
+        of the <b>original</b> and <b>processed</b> versions. Your expert assessment of each version
+        will contribute to the validation of specular reflection removal techniques in surgical imaging.
+        </p></div>""", unsafe_allow_html=True)
 
+        with st.form("login", border=True):
+            st.markdown("##### Evaluator Information")
+            name = st.text_input("Full Name *", placeholder="e.g. Dr. Jane Smith")
+            c1, c2 = st.columns(2)
+            with c1:
+                specialty = st.selectbox("Specialty *", [
+                    "Colorectal Surgery","General Surgery","Gastroenterology",
+                    "Urology","Gynecology","ENT","Other"])
+            with c2:
+                experience = st.text_input("Years of Surgical Experience *", placeholder="e.g. 12")
+            institution = st.text_input("Institution / Hospital *", placeholder="e.g. University Hospital")
+
+            if st.form_submit_button("Proceed to Evaluation →", type="primary", use_container_width=True):
+                if not name.strip():
+                    st.error("Please provide your full name.")
+                elif not experience.strip():
+                    st.error("Please indicate your years of experience.")
+                else:
+                    st.session_state.evaluator = {
+                        "name": name.strip(), "specialty": specialty,
+                        "experience": experience.strip(), "institution": institution.strip(),
+                        "timestamp": datetime.now().isoformat()}
+                    st.session_state.page = "instructions"
+                    st.rerun()
+
+# ── INSTRUCTIONS ─────────────────────────────────────────────
 def instructions_page():
-    st.markdown('''<div class="header-bar"><h2 style="margin:0">📋 Instructions</h2></div>''', unsafe_allow_html=True)
+    st.markdown("""<div class="header-bar">
+        <div><h2>📋 Evaluation Protocol</h2>
+        <p>Please review the following instructions before proceeding</p></div>
+    </div>""", unsafe_allow_html=True)
+
     _, col, _ = st.columns([1,2,1])
     with col:
-        st.markdown("""
-**What to do:**
-1. Watch **Video A** and **Video B** (same surgical scene, may differ in processing)
-2. Rate each on 5 criteria using sliders (1 = Very Poor → 5 = Excellent)
-3. Pick your overall surgical preference
+        st.markdown("""<div class="info-card">
+        <h4 style="margin-top:0">Procedure</h4>
+        <p><span class="step-num">1</span> Each video displays the <b>original recording</b> (left) alongside the
+        <b>processed version</b> (right) in a single side-by-side view.</p>
+        <p><span class="step-num">2</span> Please watch the full video, then rate <b>both versions independently</b>
+        across five clinical criteria using a 1–5 scale.</p>
+        <p><span class="step-num">3</span> Finally, indicate your <b>overall preference</b> for surgical use.</p>
+        </div>""", unsafe_allow_html=True)
 
-> 🔁 Replay anytime &nbsp;&nbsp; 💾 Auto-saved after each pair &nbsp;&nbsp; 🔒 Blinded study
-""")
-        if st.button("Start →", type="primary", use_container_width=True):
-            st.session_state.page = "evaluate"; st.rerun()
+        st.markdown("""<div class="info-card">
+        <h4 style="margin-top:0">Rating Scale</h4>
 
+| Score | Interpretation |
+|:-----:|:---------------|
+| **1** | Very Poor |
+| **2** | Poor |
+| **3** | Acceptable |
+| **4** | Good |
+| **5** | Excellent |
+
+</div>""", unsafe_allow_html=True)
+
+        if st.button("Begin Evaluation →", type="primary", use_container_width=True):
+            st.session_state.page = "evaluate"
+            st.rerun()
+
+# ── EVALUATION ───────────────────────────────────────────────
 def evaluation_page():
     vids = list(VIDEOS.keys())
     idx = st.session_state.current_video
-    if idx >= len(vids): st.session_state.page = "thankyou"; st.rerun(); return
+    if idx >= len(vids):
+        st.session_state.page = "thankyou"
+        st.rerun()
+        return
 
-    vn = vids[idx]; vid = VIDEOS[vn]
-    swap = st.session_state.assignments[vn]["swap"]
-    url_a = vid["inpainted"] if swap else vid["original"]
-    url_b = vid["original"] if swap else vid["inpainted"]
-
+    vn = vids[idx]
+    vid = VIDEOS[vn]
     pct = idx / len(vids)
-    st.markdown(f'''<div class="header-bar">
-        <span>Pair <b>{idx+1}</b> / {len(vids)} &nbsp;·&nbsp;
-        <span style="background:rgba(255,255,255,.2);padding:2px 10px;border-radius:20px">{vid["category"]}</span></span>
-        <span style="font-size:.9rem;opacity:.85">{int(pct*100)}% complete</span>
-    </div>''', unsafe_allow_html=True)
+
+    st.markdown(f"""<div class="header-bar">
+        <span style="font-size:1.1rem">
+            Video <b>{idx+1}</b> of {len(vids)} &nbsp;&middot;&nbsp;
+            <span style="background:rgba(255,255,255,.15);padding:3px 12px;border-radius:20px;font-size:0.9rem">{vid["category"]}</span>
+        </span>
+        <span style="font-size:.88rem;opacity:.8">{int(pct*100)}% complete</span>
+    </div>""", unsafe_allow_html=True)
     st.progress(pct)
 
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown('<div class="vid-label lbl-a">🎬 Video A</div>', unsafe_allow_html=True)
-        st.components.v1.iframe(url_a, height=270)
-    with c2:
-        st.markdown('<div class="vid-label lbl-b">🎬 Video B</div>', unsafe_allow_html=True)
-        st.components.v1.iframe(url_b, height=270)
+    # Single combined video
+    st.markdown("""<div style="display:flex;justify-content:center;margin-bottom:4px">
+        <div style="display:flex;gap:0;font-weight:700;font-size:0.95rem">
+            <span style="background:#1a5276;color:white;padding:4px 40px;border-radius:6px 0 0 6px">Original</span>
+            <span style="background:#27ae60;color:white;padding:4px 40px;border-radius:0 6px 6px 0">Processed</span>
+        </div>
+    </div>""", unsafe_allow_html=True)
+    st.components.v1.iframe(vid["url"], height=380)
+
+    st.markdown("---")
 
     with st.form(f"f_{vn}", border=False):
-        st.markdown('''<div class="rating-header">
+        st.markdown("""<div class="rating-header">
             <span>Criterion</span>
-            <span style="color:#1e40af;text-align:center">Video A</span>
-            <span style="color:#166534;text-align:center">Video B</span></div>''', unsafe_allow_html=True)
+            <span style="color:#1a5276;text-align:center">Original</span>
+            <span style="color:#27ae60;text-align:center">Processed</span>
+        </div>""", unsafe_allow_html=True)
 
         ratings = {}
         for key, label, desc in CRITERIA:
             cc1, cc2, cc3 = st.columns([2,1,1])
-            with cc1: st.markdown(f"**{label}** &nbsp; *{desc}*")
-            with cc2: ratings[f"{key}_a"] = st.select_slider("A", [1,2,3,4,5], value=3, key=f"A_{key}_{vn}", label_visibility="collapsed")
-            with cc3: ratings[f"{key}_b"] = st.select_slider("B", [1,2,3,4,5], value=3, key=f"B_{key}_{vn}", label_visibility="collapsed")
+            with cc1:
+                st.markdown(f"**{label}**<br><span style='color:#64748b;font-size:0.85rem'>{desc}</span>", unsafe_allow_html=True)
+            with cc2:
+                ratings[f"{key}_original"] = st.select_slider(
+                    "Orig", [1,2,3,4,5], value=3, key=f"O_{key}_{vn}", label_visibility="collapsed")
+            with cc3:
+                ratings[f"{key}_processed"] = st.select_slider(
+                    "Proc", [1,2,3,4,5], value=3, key=f"P_{key}_{vn}", label_visibility="collapsed")
 
         st.markdown("---")
         c1, c2 = st.columns([3,1])
-        with c1: pref = st.radio("🏆 **Prefer for surgery?**", ["Video A","Video B","No Difference"], horizontal=True, key=f"p_{vn}")
-        with c2: comments = st.text_input("💬 Notes", key=f"c_{vn}", placeholder="optional")
+        with c1:
+            pref = st.radio("🏆 **Which version would you prefer for clinical use?**",
+                            ["Original", "Processed", "No Preference"],
+                            horizontal=True, key=f"p_{vn}")
+        with c2:
+            comments = st.text_input("💬 Comments", key=f"c_{vn}", placeholder="optional")
 
-        if st.form_submit_button("✅ Submit & Next →", type="primary", use_container_width=True):
-            row = {"evaluator_name":st.session_state.evaluator["name"],
-                   "specialty":st.session_state.evaluator["specialty"],
-                   "experience":st.session_state.evaluator["experience"],
-                   "institution":st.session_state.evaluator.get("institution",""),
-                   "video_name":vn,"category":vid["category"],
-                   "video_a_is":"inpainted" if swap else "original",
-                   "preference":pref,"comments":comments,**ratings}
+        if st.form_submit_button("Submit & Continue →", type="primary", use_container_width=True):
+            row = {
+                "evaluator_name": st.session_state.evaluator["name"],
+                "specialty": st.session_state.evaluator["specialty"],
+                "experience": st.session_state.evaluator["experience"],
+                "institution": st.session_state.evaluator.get("institution",""),
+                "video_name": vn,
+                "category": vid["category"],
+                "preference": pref,
+                "comments": comments,
+                **ratings
+            }
             if save_to_supabase(row):
                 st.session_state.responses.append(row)
-                st.session_state.current_video += 1; st.rerun()
-            else: st.error("Save failed — please retry.")
+                st.session_state.current_video += 1
+                st.rerun()
+            else:
+                st.error("Submission failed. Please try again.")
 
+# ── THANK YOU ────────────────────────────────────────────────
 def thankyou_page():
     _, col, _ = st.columns([1,2,1])
     with col:
-        st.markdown('''<div class="header-bar" style="justify-content:center;text-align:center">
-            <div><h1 style="margin:0">🎉 Thank You!</h1>
-            <p style="margin:6px 0 0;opacity:.9">Responses saved securely.</p></div>
-        </div>''', unsafe_allow_html=True)
+        st.markdown("""<div class="header-bar" style="justify-content:center;text-align:center">
+            <div><h2 style="margin:0">🎉 Evaluation Complete</h2></div>
+        </div>""", unsafe_allow_html=True)
+
         name = st.session_state.evaluator.get("name","")
-        st.markdown(f"<div style='text-align:center;padding:20px'><h3>Thank you, <b>{name}</b>!</h3><p>You completed all <b>{len(VIDEOS)}</b> video pairs.<br>Your expert input helps advance AI-assisted surgery.</p></div>", unsafe_allow_html=True)
+        st.markdown(f"""<div class="info-card" style="text-align:center;padding:30px">
+            <h3 style="margin-top:0">Thank you, {name}.</h3>
+            <p style="font-size:1.05rem;color:#475569">
+            Your responses have been recorded successfully.<br>
+            Your expert evaluation is instrumental in advancing endoscopic imaging quality.<br><br>
+            If you have any questions about this study, please contact the research team.
+            </p>
+        </div>""", unsafe_allow_html=True)
         st.balloons()
 
 {"login":login_page,"instructions":instructions_page,"evaluate":evaluation_page,"thankyou":thankyou_page}[st.session_state.page]()
