@@ -1,7 +1,6 @@
 import streamlit as st
 import random
 import httpx
-import json
 from datetime import datetime
 
 st.set_page_config(page_title="Surgical Video Evaluation", layout="wide", page_icon="🏥")
@@ -9,18 +8,20 @@ st.set_page_config(page_title="Surgical Video Evaluation", layout="wide", page_i
 SUPABASE_URL = "https://jkfdxwhusxpfojvsqtlv.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprZmR4d2h1c3hwZm9qdnNxdGx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4ODI4MjMsImV4cCI6MjA4OTQ1ODgyM30.0oUmlIWgCbVjK2Yqne6AnGiEd3LoqIhucmnGTxFJ5-U"
 
-# ── Custom CSS ──────────────────────────────────────────────
 st.markdown("""
 <style>
-    .main { background-color: #f8fafc; }
-    .stButton>button { border-radius: 8px; font-weight: 600; }
-    .video-label { font-size: 1.3rem; font-weight: 700; color: #1e3a5f; text-align: center; padding: 8px; 
-                    background: #e8f0fe; border-radius: 8px; margin-bottom: 8px; }
-    .criteria-box { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; 
-                     padding: 15px; margin-bottom: 10px; }
-    .progress-text { font-size: 0.9rem; color: #64748b; text-align: right; }
-    .header-box { background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); 
-                   padding: 20px; border-radius: 12px; color: white; margin-bottom: 20px; }
+[data-testid="stAppViewContainer"] { background: #f0f4f8; }
+.header-bar { background: linear-gradient(90deg,#1e3a5f,#2563eb); padding:14px 24px; border-radius:10px;
+               color:white; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.vid-label { text-align:center; font-weight:700; font-size:1.1rem; padding:6px;
+              border-radius:6px; margin-bottom:6px; }
+.lbl-a { background:#dbeafe; color:#1e40af; }
+.lbl-b { background:#dcfce7; color:#166534; }
+.rating-header { display:grid; grid-template-columns:2fr 1fr 1fr;
+                  gap:8px; font-weight:700; font-size:0.85rem; color:#475569;
+                  padding:6px 10px; border-bottom:2px solid #e2e8f0; margin-bottom:4px; }
+div[data-testid="stForm"] { background:white; padding:16px; border-radius:10px;
+                              box-shadow:0 1px 4px rgba(0,0,0,0.08); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -45,213 +46,126 @@ VIDEOS = {
 }
 
 CRITERIA = [
-    ("specular_severity",   "🔆 Specular Reflection Severity",  "How much do specular reflections obstruct the surgical field?"),
-    ("tissue_visibility",   "🔬 Tissue Visibility",              "How clearly can you see the underlying tissue and anatomy?"),
-    ("visual_naturalness",  "🎨 Visual Naturalness",             "Does the video look realistic, free from color artifacts or blurring?"),
-    ("temporal_consistency","⏱️ Temporal Consistency",           "Is the video smooth without flickering or frame-to-frame jumps?"),
-    ("clinical_confidence", "✅ Clinical Confidence",            "How confident would you feel performing a procedure with this view?"),
+    ("specular_severity",    "🔆 Specular Severity",    "Reflections obstructing the field?"),
+    ("tissue_visibility",    "🔬 Tissue Visibility",     "Underlying tissue clarity?"),
+    ("visual_naturalness",   "🎨 Visual Naturalness",    "Realistic, artifact-free?"),
+    ("temporal_consistency", "⏱️ Temporal Consistency", "Smooth, no flickering?"),
+    ("clinical_confidence",  "✅ Clinical Confidence",   "Confidence performing procedure?"),
 ]
 
 def save_to_supabase(row):
-    headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
-                "Content-Type": "application/json", "Prefer": "return=minimal"}
-    r = httpx.post(f"{SUPABASE_URL}/rest/v1/evaluations", headers=headers, json=row)
+    hdrs = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json", "Prefer": "return=minimal"}
+    r = httpx.post(f"{SUPABASE_URL}/rest/v1/evaluations", headers=hdrs, json=row)
     return r.status_code in [200, 201]
 
-# Session state
 for k, v in {"page":"login","evaluator":{},"assignments":{},"responses":[],"current_video":0}.items():
     if k not in st.session_state: st.session_state[k] = v
 
-# ── LOGIN ────────────────────────────────────────────────────
 def login_page():
-    st.markdown("""
-    <div class="header-box">
-        <h1 style="margin:0;font-size:2rem;">🏥 Surgical Video Quality Evaluation</h1>
-        <p style="margin:8px 0 0 0;opacity:0.9;">AI-Based Specular Reflection Removal — Clinical Validation Study</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns([1,2,1])
-    with col2:
-        st.markdown("""
-        <div style='background:#eff6ff;padding:16px;border-left:4px solid #2563eb;border-radius:6px;margin-bottom:20px'>
-        <b>About this study:</b> You will evaluate <b>17 pairs</b> of endoscopic surgical videos. 
-        Each pair shows the same surgical scene — one video may have been processed by an AI 
-        specular reflection removal system. Your expert judgment helps validate this technology.
-        <br><br>⏱️ Estimated time: <b>20–30 minutes</b>
-        </div>
-        """, unsafe_allow_html=True)
-
+    st.markdown('''<div class="header-bar">
+        <div><h2 style="margin:0">🏥 Surgical Video Evaluation</h2>
+        <p style="margin:2px 0 0;opacity:.85;font-size:.9rem">AI Specular Reflection Removal — Clinical Validation</p></div>
+    </div>''', unsafe_allow_html=True)
+    _, col, _ = st.columns([1,1.6,1])
+    with col:
+        st.markdown('''<div style="background:#eff6ff;border-left:4px solid #2563eb;padding:12px;border-radius:6px;margin-bottom:16px;font-size:.95rem">
+        You will evaluate <b>17 video pairs</b> — same scene, possibly different processing.<br>
+        ⏱️ <b>~20 min</b> &nbsp;|&nbsp; 🔒 Fully blinded &nbsp;|&nbsp; 💾 Auto-saved</div>''', unsafe_allow_html=True)
         with st.form("login", border=True):
-            st.markdown("#### 👤 Your Details")
-            name = st.text_input("Full Name *", placeholder="e.g. Dr. John Smith")
+            name = st.text_input("Full Name *", placeholder="Dr. John Smith")
             c1, c2 = st.columns(2)
-            with c1:
-                specialty = st.selectbox("Specialty *", ["Colorectal Surgery","General Surgery",
-                    "Gastroenterology","Urology","Gynecology","ENT","Other"])
-            with c2:
-                experience = st.selectbox("Years of Experience *", ["<5","5–10","10–20",">20"])
-            institution = st.text_input("Institution / Hospital", placeholder="e.g. Royal London Hospital")
-
-            submitted = st.form_submit_button("Begin Evaluation →", type="primary", use_container_width=True)
-            if submitted:
-                if not name.strip():
-                    st.error("Please enter your name.")
+            with c1: specialty = st.selectbox("Specialty", ["Colorectal Surgery","General Surgery","Gastroenterology","Urology","Gynecology","ENT","Other"])
+            with c2: experience = st.selectbox("Experience", ["<5 yrs","5–10 yrs","10–20 yrs",">20 yrs"])
+            institution = st.text_input("Institution", placeholder="Royal London Hospital")
+            if st.form_submit_button("Begin →", type="primary", use_container_width=True):
+                if not name.strip(): st.error("Please enter your name.")
                 else:
-                    st.session_state.evaluator = {"name": name.strip(), "specialty": specialty,
-                        "experience": experience, "institution": institution,
-                        "timestamp": datetime.now().isoformat()}
-                    st.session_state.assignments = {v: {"swap": random.random()>0.5} for v in VIDEOS}
-                    st.session_state.page = "instructions"
-                    st.rerun()
+                    st.session_state.evaluator = {"name":name.strip(),"specialty":specialty,"experience":experience,"institution":institution,"timestamp":datetime.now().isoformat()}
+                    st.session_state.assignments = {v:{"swap":random.random()>.5} for v in VIDEOS}
+                    st.session_state.page = "instructions"; st.rerun()
 
-# ── INSTRUCTIONS ─────────────────────────────────────────────
 def instructions_page():
-    st.markdown("""
-    <div class="header-box">
-        <h1 style="margin:0;font-size:1.8rem;">📋 Study Instructions</h1>
-    </div>
-    """, unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns([1,2,1])
-    with col2:
+    st.markdown('''<div class="header-bar"><h2 style="margin:0">📋 Instructions</h2></div>''', unsafe_allow_html=True)
+    _, col, _ = st.columns([1,2,1])
+    with col:
         st.markdown("""
-        ### How This Works
-        1. You will see **17 pairs** of surgical videos labeled **Video A** and **Video B**
-        2. Both show the **same surgical scene** — one may be AI-processed
-        3. Rate each video **independently** on 5 clinical criteria
-        4. Select your **overall preference** at the end of each pair
+**What to do:**
+1. Watch **Video A** and **Video B** (same surgical scene, may differ in processing)
+2. Rate each on 5 criteria using sliders (1 = Very Poor → 5 = Excellent)
+3. Pick your overall surgical preference
 
-        ### Rating Scale
-        | ⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-        |---|---|---|---|---|
-        | Very Poor | Poor | Acceptable | Good | Excellent |
+> 🔁 Replay anytime &nbsp;&nbsp; 💾 Auto-saved after each pair &nbsp;&nbsp; 🔒 Blinded study
+""")
+        if st.button("Start →", type="primary", use_container_width=True):
+            st.session_state.page = "evaluate"; st.rerun()
 
-        ### Important
-        - ▶️ Watch **both videos fully** before rating
-        - 🔁 You may **replay** videos as many times as needed
-        - 💾 Responses are **saved automatically** after each pair
-        - 🔒 This is a **blinded** study — video labels (A/B) are randomised
-        """)
-
-        if st.button("Start Evaluation →", type="primary", use_container_width=True):
-            st.session_state.page = "evaluate"
-            st.rerun()
-
-# ── EVALUATION ───────────────────────────────────────────────
 def evaluation_page():
-    vid_names = list(VIDEOS.keys())
+    vids = list(VIDEOS.keys())
     idx = st.session_state.current_video
-    if idx >= len(vid_names):
-        st.session_state.page = "thankyou"
-        st.rerun()
-        return
+    if idx >= len(vids): st.session_state.page = "thankyou"; st.rerun(); return
 
-    vid_name = vid_names[idx]
-    vid = VIDEOS[vid_name]
-    swap = st.session_state.assignments[vid_name]["swap"]
+    vn = vids[idx]; vid = VIDEOS[vn]
+    swap = st.session_state.assignments[vn]["swap"]
     url_a = vid["inpainted"] if swap else vid["original"]
     url_b = vid["original"] if swap else vid["inpainted"]
 
-    # Progress
-    pct = idx / len(vid_names)
-    st.markdown(f"""
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="font-weight:700;font-size:1.1rem;color:#1e3a5f">
-            Video Pair {idx+1} of {len(vid_names)} &nbsp;·&nbsp; 
-            <span style="background:#dbeafe;padding:3px 10px;border-radius:20px;font-size:0.9rem">{vid['category']}</span>
-        </span>
-        <span class="progress-text">{int(pct*100)}% complete</span>
-    </div>
-    """, unsafe_allow_html=True)
+    pct = idx / len(vids)
+    st.markdown(f'''<div class="header-bar">
+        <span>Pair <b>{idx+1}</b> / {len(vids)} &nbsp;·&nbsp;
+        <span style="background:rgba(255,255,255,.2);padding:2px 10px;border-radius:20px">{vid["category"]}</span></span>
+        <span style="font-size:.9rem;opacity:.85">{int(pct*100)}% complete</span>
+    </div>''', unsafe_allow_html=True)
     st.progress(pct)
-    st.markdown("---")
 
-    # Videos side by side
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown('<div class="video-label">🎬 Video A</div>', unsafe_allow_html=True)
-        st.components.v1.iframe(url_a, height=320)
-    with col2:
-        st.markdown('<div class="video-label">🎬 Video B</div>', unsafe_allow_html=True)
-        st.components.v1.iframe(url_b, height=320)
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown('<div class="vid-label lbl-a">🎬 Video A</div>', unsafe_allow_html=True)
+        st.components.v1.iframe(url_a, height=270)
+    with c2:
+        st.markdown('<div class="vid-label lbl-b">🎬 Video B</div>', unsafe_allow_html=True)
+        st.components.v1.iframe(url_b, height=270)
 
-    st.markdown("---")
-
-    with st.form(f"form_{vid_name}", border=False):
-        st.markdown("### 📊 Rate Each Video &nbsp; <span style='font-size:0.85rem;color:#64748b'>(1 = Very Poor → 5 = Excellent)</span>", 
-                    unsafe_allow_html=True)
+    with st.form(f"f_{vn}", border=False):
+        st.markdown('''<div class="rating-header">
+            <span>Criterion</span>
+            <span style="color:#1e40af;text-align:center">Video A</span>
+            <span style="color:#166534;text-align:center">Video B</span></div>''', unsafe_allow_html=True)
 
         ratings = {}
         for key, label, desc in CRITERIA:
-            with st.container():
-                st.markdown(f"""
-                <div class="criteria-box">
-                <b>{label}</b><br>
-                <span style="color:#64748b;font-size:0.9rem">{desc}</span>
-                </div>
-                """, unsafe_allow_html=True)
-                c1, c2 = st.columns(2)
-                with c1:
-                    ratings[f"{key}_a"] = st.select_slider(
-                        "Video A", [1,2,3,4,5], value=3, key=f"{key}_A_{vid_name}")
-                with c2:
-                    ratings[f"{key}_b"] = st.select_slider(
-                        "Video B", [1,2,3,4,5], value=3, key=f"{key}_B_{vid_name}")
+            cc1, cc2, cc3 = st.columns([2,1,1])
+            with cc1: st.markdown(f"**{label}** &nbsp; *{desc}*")
+            with cc2: ratings[f"{key}_a"] = st.select_slider("A", [1,2,3,4,5], value=3, key=f"A_{key}_{vn}", label_visibility="collapsed")
+            with cc3: ratings[f"{key}_b"] = st.select_slider("B", [1,2,3,4,5], value=3, key=f"B_{key}_{vn}", label_visibility="collapsed")
 
         st.markdown("---")
-        st.markdown("### 🏆 Overall Preference")
-        preference = st.radio(
-            "Which video would you prefer during surgery?",
-            ["Video A", "Video B", "No Difference"],
-            horizontal=True, key=f"pref_{vid_name}"
-        )
-        comments = st.text_area("💬 Additional comments (optional)", 
-                                 placeholder="Any observations about this video pair...",
-                                 key=f"comments_{vid_name}")
+        c1, c2 = st.columns([3,1])
+        with c1: pref = st.radio("🏆 **Prefer for surgery?**", ["Video A","Video B","No Difference"], horizontal=True, key=f"p_{vn}")
+        with c2: comments = st.text_input("💬 Notes", key=f"c_{vn}", placeholder="optional")
 
-        submitted = st.form_submit_button("✅ Submit & Next →", type="primary", use_container_width=True)
-        if submitted:
-            row = {
-                "evaluator_name": st.session_state.evaluator["name"],
-                "specialty": st.session_state.evaluator["specialty"],
-                "experience": st.session_state.evaluator["experience"],
-                "institution": st.session_state.evaluator.get("institution",""),
-                "video_name": vid_name,
-                "category": vid["category"],
-                "video_a_is": "inpainted" if swap else "original",
-                "preference": preference,
-                "comments": comments,
-                **ratings
-            }
-            ok = save_to_supabase(row)
-            if ok:
+        if st.form_submit_button("✅ Submit & Next →", type="primary", use_container_width=True):
+            row = {"evaluator_name":st.session_state.evaluator["name"],
+                   "specialty":st.session_state.evaluator["specialty"],
+                   "experience":st.session_state.evaluator["experience"],
+                   "institution":st.session_state.evaluator.get("institution",""),
+                   "video_name":vn,"category":vid["category"],
+                   "video_a_is":"inpainted" if swap else "original",
+                   "preference":pref,"comments":comments,**ratings}
+            if save_to_supabase(row):
                 st.session_state.responses.append(row)
-                st.session_state.current_video += 1
-                st.rerun()
-            else:
-                st.error("Failed to save. Please try again.")
+                st.session_state.current_video += 1; st.rerun()
+            else: st.error("Save failed — please retry.")
 
-# ── THANK YOU ────────────────────────────────────────────────
 def thankyou_page():
-    col1, col2, col3 = st.columns([1,2,1])
-    with col2:
-        st.markdown("""
-        <div class="header-box" style="text-align:center">
-            <h1 style="margin:0;font-size:2.5rem;">🎉 Thank You!</h1>
-        </div>
-        """, unsafe_allow_html=True)
-        st.markdown(f"""
-        <div style='text-align:center;padding:30px'>
-            <h3>Thank you, <b>{st.session_state.evaluator.get('name','')}</b>!</h3>
-            <p style='font-size:1.1rem'>You have successfully completed the evaluation of all 
-            <b>{len(VIDEOS)} video pairs</b>.</p>
-            <p style='color:#64748b'>Your expert feedback is invaluable for advancing 
-            AI-assisted surgical visualization.<br>Your responses have been securely saved.</p>
-        </div>
-        """, unsafe_allow_html=True)
+    _, col, _ = st.columns([1,2,1])
+    with col:
+        st.markdown('''<div class="header-bar" style="justify-content:center;text-align:center">
+            <div><h1 style="margin:0">🎉 Thank You!</h1>
+            <p style="margin:6px 0 0;opacity:.9">Responses saved securely.</p></div>
+        </div>''', unsafe_allow_html=True)
+        name = st.session_state.evaluator.get("name","")
+        st.markdown(f"<div style='text-align:center;padding:20px'><h3>Thank you, <b>{name}</b>!</h3><p>You completed all <b>{len(VIDEOS)}</b> video pairs.<br>Your expert input helps advance AI-assisted surgery.</p></div>", unsafe_allow_html=True)
         st.balloons()
 
-# ── ROUTER ───────────────────────────────────────────────────
-{"login": login_page, "instructions": instructions_page, 
-  "evaluate": evaluation_page, "thankyou": thankyou_page}[st.session_state.page]()
+{"login":login_page,"instructions":instructions_page,"evaluate":evaluation_page,"thankyou":thankyou_page}[st.session_state.page]()
