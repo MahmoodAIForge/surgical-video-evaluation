@@ -6,6 +6,7 @@ st.set_page_config(page_title="Clinical Video Evaluation", layout="wide", page_i
 
 SUPABASE_URL = "https://jkfdxwhusxpfojvsqtlv.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprZmR4d2h1c3hwZm9qdnNxdGx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4ODI4MjMsImV4cCI6MjA4OTQ1ODgyM30.0oUmlIWgCbVjK2Yqne6AnGiEd3LoqIhucmnGTxFJ5-U"
+BANNER_URL = "https://raw.githubusercontent.com/MahmoodAIForge/surgical-video-evaluation/main/banner.png"
 
 st.markdown("""
 <style>
@@ -26,7 +27,6 @@ div[data-testid="stForm"] { background:white; padding:18px; border-radius:10px;
 </style>
 """, unsafe_allow_html=True)
 
-# Combined videos hosted on Google Drive — UPDATE these IDs after uploading combined videos
 VIDEOS = {
     "Blood_Sucking_100813_VID005": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Blood Sucking"},
     "Bleeding_100813_VID005": {"url": "https://drive.google.com/file/d/COMBINED_ID_HERE/preview", "category": "Bleeding"},
@@ -64,7 +64,6 @@ def save_to_supabase(row):
 for k, v in {"page":"login","evaluator":{},"responses":[],"current_video":0}.items():
     if k not in st.session_state: st.session_state[k] = v
 
-# ── LOGIN ────────────────────────────────────────────────────
 def login_page():
     st.markdown("""<div class="header-bar">
         <div><h2>🏥 Specular Reflection Removal</h2>
@@ -73,6 +72,8 @@ def login_page():
 
     _, col, _ = st.columns([1,1.6,1])
     with col:
+        st.image(BANNER_URL, use_container_width=True)
+
         st.markdown("""<div class="info-card">
         <p style="font-size:0.95rem;margin:0">
         Thank you for participating in this clinical evaluation study. You will be presented with
@@ -106,7 +107,6 @@ def login_page():
                     st.session_state.page = "instructions"
                     st.rerun()
 
-# ── INSTRUCTIONS ─────────────────────────────────────────────
 def instructions_page():
     st.markdown("""<div class="header-bar">
         <div><h2>📋 Evaluation Protocol</h2>
@@ -115,13 +115,15 @@ def instructions_page():
 
     _, col, _ = st.columns([1,2,1])
     with col:
+        st.image(BANNER_URL, use_container_width=True, caption="Example: Original (left) vs Processed (right)")
+
         st.markdown("""<div class="info-card">
         <h4 style="margin-top:0">Procedure</h4>
         <p><span class="step-num">1</span> Each video displays the <b>original recording</b> (left) alongside the
         <b>processed version</b> (right) in a single side-by-side view.</p>
         <p><span class="step-num">2</span> Please watch the full video, then rate <b>both versions independently</b>
         across five clinical criteria using a 1–5 scale.</p>
-        <p><span class="step-num">3</span> Finally, indicate your <b>overall preference</b> for surgical use.</p>
+        <p><span class="step-num">3</span> Finally, indicate your <b>overall preference</b> for clinical use.</p>
         </div>""", unsafe_allow_html=True)
 
         st.markdown("""<div class="info-card">
@@ -141,7 +143,6 @@ def instructions_page():
             st.session_state.page = "evaluate"
             st.rerun()
 
-# ── EVALUATION ───────────────────────────────────────────────
 def evaluation_page():
     vids = list(VIDEOS.keys())
     idx = st.session_state.current_video
@@ -163,7 +164,6 @@ def evaluation_page():
     </div>""", unsafe_allow_html=True)
     st.progress(pct)
 
-    # Single combined video
     st.markdown("""<div style="display:flex;justify-content:center;margin-bottom:4px">
         <div style="display:flex;gap:0;font-weight:700;font-size:0.95rem">
             <span style="background:#1a5276;color:white;padding:4px 40px;border-radius:6px 0 0 6px">Original</span>
@@ -221,7 +221,6 @@ def evaluation_page():
             else:
                 st.error("Submission failed. Please try again.")
 
-# ── THANK YOU ────────────────────────────────────────────────
 def thankyou_page():
     _, col, _ = st.columns([1,2,1])
     with col:
