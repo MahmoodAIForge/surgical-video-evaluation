@@ -21,8 +21,6 @@ div[data-testid="stForm"] { background:white; padding:18px; border-radius:10px;
               padding:18px; margin-bottom:14px; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
 .step-num { display:inline-block; background:#1a5276; color:white; width:26px; height:26px;
              border-radius:50%; text-align:center; line-height:26px; font-weight:700; font-size:0.85rem; margin-right:8px; }
-.criteria-row { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;
-                 padding:12px 16px; margin-bottom:8px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -171,25 +169,26 @@ def evaluation_page():
     </div>""", unsafe_allow_html=True)
     st.components.v1.iframe(vid["url"], height=380)
 
-    st.markdown("---")
-
     with st.form(f"f_{vn}", border=False):
-        st.markdown("### Rate the Processed Video &nbsp; <span style='font-size:0.85rem;color:#64748b'>(1 = Very Poor → 5 = Excellent)</span>", unsafe_allow_html=True)
+        st.markdown("##### Rate the Processed Video &nbsp; <span style='color:#64748b;font-size:0.8rem'>(1 = Very Poor → 5 = Excellent)</span>", unsafe_allow_html=True)
 
         ratings = {}
         for key, label, desc in CRITERIA:
-            st.markdown(f"""<div class="criteria-row">
-                <b>{label}</b> &nbsp; <span style="color:#64748b;font-size:0.88rem">— {desc}</span>
-            </div>""", unsafe_allow_html=True)
-            ratings[key] = st.select_slider(
-                label, [1,2,3,4,5], value=3, key=f"{key}_{vn}", label_visibility="collapsed")
+            c1, c2 = st.columns([3, 1])
+            with c1:
+                st.markdown(f"**{label}** — *{desc}*")
+            with c2:
+                ratings[key] = st.select_slider(
+                    label, [1,2,3,4,5], value=3, key=f"{key}_{vn}", label_visibility="collapsed")
 
         st.markdown("---")
-        pref = st.radio("🏆 **Which version would you prefer for clinical use?**",
-                        ["Original", "Processed", "No Preference"],
-                        horizontal=True, key=f"p_{vn}")
-        comments = st.text_area("💬 Additional Comments or Observations", key=f"c_{vn}",
-                                 placeholder="Any additional details about this video pair...", height=80)
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            pref = st.radio("🏆 **Prefer for clinical use?**",
+                            ["Original", "Processed", "No Preference"],
+                            horizontal=True, key=f"p_{vn}")
+        with c2:
+            comments = st.text_input("💬 Additional comments or observations", key=f"c_{vn}", placeholder="optional")
 
         if st.form_submit_button("Submit & Continue →", type="primary", use_container_width=True):
             row = {
