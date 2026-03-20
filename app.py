@@ -15,15 +15,14 @@ st.markdown("""
                color:white; display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
 .header-bar h2 { margin:0; font-size:1.6rem; letter-spacing:0.3px; }
 .header-bar p { margin:3px 0 0; opacity:.8; font-size:.88rem; }
-.rating-header { display:grid; grid-template-columns:2fr 1fr 1fr;
-                  gap:8px; font-weight:700; font-size:0.85rem; color:#475569;
-                  padding:8px 12px; border-bottom:2px solid #cbd5e1; margin-bottom:6px; }
 div[data-testid="stForm"] { background:white; padding:18px; border-radius:10px;
                               box-shadow:0 1px 6px rgba(0,0,0,0.07); }
 .info-card { background:#ffffff; border:1px solid #e2e8f0; border-radius:10px;
               padding:18px; margin-bottom:14px; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
 .step-num { display:inline-block; background:#1a5276; color:white; width:26px; height:26px;
              border-radius:50%; text-align:center; line-height:26px; font-weight:700; font-size:0.85rem; margin-right:8px; }
+.criteria-row { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;
+                 padding:12px 16px; margin-bottom:8px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -48,11 +47,11 @@ VIDEOS = {
 }
 
 CRITERIA = [
-    ("specular_severity",    "🔆 Specular Reflection Severity",  "To what extent do specular reflections obstruct the surgical field of view?"),
-    ("tissue_visibility",    "🔬 Tissue Visibility",              "How clearly are the underlying tissue structures and anatomy visible?"),
-    ("visual_naturalness",   "🎨 Visual Naturalness",             "Does the image appear clinically realistic, without visible artifacts or colour distortion?"),
-    ("temporal_consistency", "⏱️ Temporal Consistency",           "Is the video temporally stable, free of flickering or inter-frame discontinuities?"),
-    ("clinical_confidence",  "✅ Clinical Confidence",            "How confident would you feel making clinical decisions based on this visual quality?"),
+    ("reflection_removal",   "🔆 Reflection Removal",     "How effectively were specular reflections removed?"),
+    ("anatomical_clarity",   "🔬 Anatomical Clarity",      "Can you clearly identify the underlying anatomy after cleaning?"),
+    ("inpainting_quality",   "🩹 Inpainting Quality",      "Are cleaned areas filled with realistic tissue texture?"),
+    ("clinical_confidence",  "✅ Clinical Confidence",      "Would you trust this view for clinical decisions?"),
+    ("overall_quality",      "👁️ Overall Visual Quality",  "Rate the overall visual quality of the processed video"),
 ]
 
 def save_to_supabase(row):
@@ -77,9 +76,9 @@ def login_page():
         st.markdown("""<div class="info-card">
         <p style="font-size:0.95rem;margin:0">
         Thank you for participating in this clinical evaluation study. You will be presented with
-        a series of endoscopic surgical video recordings, each displayed as a side-by-side comparison
-        of the <b>original</b> and <b>processed</b> versions. Your expert assessment of each version
-        will contribute to the validation of specular reflection removal techniques in surgical imaging.
+        <b>17 endoscopic surgical videos</b>, each displayed as a side-by-side comparison
+        of the <b>original</b> (left) and <b>processed</b> (right) versions. Please rate the 
+        <b>processed video</b> on five clinical criteria.
         </p></div>""", unsafe_allow_html=True)
 
         with st.form("login", border=True):
@@ -119,11 +118,11 @@ def instructions_page():
 
         st.markdown("""<div class="info-card">
         <h4 style="margin-top:0">Procedure</h4>
-        <p><span class="step-num">1</span> Each video displays the <b>original recording</b> (left) alongside the
+        <p><span class="step-num">1</span> Each video shows the <b>original recording</b> (left) alongside the
         <b>processed version</b> (right) in a single side-by-side view.</p>
-        <p><span class="step-num">2</span> Please watch the full video, then rate <b>both versions independently</b>
-        across five clinical criteria using a 1–5 scale.</p>
-        <p><span class="step-num">3</span> Finally, indicate your <b>overall preference</b> for clinical use.</p>
+        <p><span class="step-num">2</span> Watch the full video, then rate the <b>processed version</b>
+        on five clinical criteria using a 1–5 scale.</p>
+        <p><span class="step-num">3</span> Indicate your <b>overall preference</b> for clinical use.</p>
         </div>""", unsafe_allow_html=True)
 
         st.markdown("""<div class="info-card">
@@ -175,32 +174,22 @@ def evaluation_page():
     st.markdown("---")
 
     with st.form(f"f_{vn}", border=False):
-        st.markdown("""<div class="rating-header">
-            <span>Criterion</span>
-            <span style="color:#1a5276;text-align:center">Original</span>
-            <span style="color:#27ae60;text-align:center">Processed</span>
-        </div>""", unsafe_allow_html=True)
+        st.markdown("### Rate the Processed Video &nbsp; <span style='font-size:0.85rem;color:#64748b'>(1 = Very Poor → 5 = Excellent)</span>", unsafe_allow_html=True)
 
         ratings = {}
         for key, label, desc in CRITERIA:
-            cc1, cc2, cc3 = st.columns([2,1,1])
-            with cc1:
-                st.markdown(f"**{label}**<br><span style='color:#64748b;font-size:0.85rem'>{desc}</span>", unsafe_allow_html=True)
-            with cc2:
-                ratings[f"{key}_original"] = st.select_slider(
-                    "Orig", [1,2,3,4,5], value=3, key=f"O_{key}_{vn}", label_visibility="collapsed")
-            with cc3:
-                ratings[f"{key}_processed"] = st.select_slider(
-                    "Proc", [1,2,3,4,5], value=3, key=f"P_{key}_{vn}", label_visibility="collapsed")
+            st.markdown(f"""<div class="criteria-row">
+                <b>{label}</b> &nbsp; <span style="color:#64748b;font-size:0.88rem">— {desc}</span>
+            </div>""", unsafe_allow_html=True)
+            ratings[key] = st.select_slider(
+                label, [1,2,3,4,5], value=3, key=f"{key}_{vn}", label_visibility="collapsed")
 
         st.markdown("---")
-        c1, c2 = st.columns([3,1])
-        with c1:
-            pref = st.radio("🏆 **Which version would you prefer for clinical use?**",
-                            ["Original", "Processed", "No Preference"],
-                            horizontal=True, key=f"p_{vn}")
-        with c2:
-            comments = st.text_input("💬 Comments", key=f"c_{vn}", placeholder="optional")
+        pref = st.radio("🏆 **Which version would you prefer for clinical use?**",
+                        ["Original", "Processed", "No Preference"],
+                        horizontal=True, key=f"p_{vn}")
+        comments = st.text_area("💬 Additional Comments or Observations", key=f"c_{vn}",
+                                 placeholder="Any additional details about this video pair...", height=80)
 
         if st.form_submit_button("Submit & Continue →", type="primary", use_container_width=True):
             row = {
