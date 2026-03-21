@@ -21,6 +21,10 @@ div[data-testid="stForm"] { background:white; padding:18px; border-radius:10px;
               padding:18px; margin-bottom:14px; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
 .step-num { display:inline-block; background:#1a5276; color:white; width:26px; height:26px;
              border-radius:50%; text-align:center; line-height:26px; font-weight:700; font-size:0.85rem; margin-right:8px; }
+.nav-pill { display:inline-block; padding:4px 10px; border-radius:12px; font-size:0.75rem; margin:1px; cursor:pointer; }
+.pill-done { background:#dcfce7; color:#166534; }
+.pill-current { background:#2563eb; color:white; }
+.pill-pending { background:#e2e8f0; color:#64748b; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -52,15 +56,31 @@ CRITERIA = [
     ("overall_quality",      "👁️ Overall Visual Quality",  "Rate the overall visual quality of the processed video"),
 ]
 
+HDRS = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json", "Prefer": "return=minimal"}
+
 def save_to_supabase(row):
-    hdrs = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
-            "Content-Type": "application/json", "Prefer": "return=minimal"}
-    r = httpx.post(f"{SUPABASE_URL}/rest/v1/evaluations", headers=hdrs, json=row)
+    r = httpx.post(f"{SUPABASE_URL}/rest/v1/evaluations", headers=HDRS, json=row)
     if r.status_code not in [200, 201]:
         return False, f"{r.status_code} — {r.text}"
     return True, ""
 
-for k, v in {"page":"login","evaluator":{},"responses":[],"current_video":0}.items():
+def update_in_supabase(row_id, row):
+    hdrs = {**HDRS, "Prefer": "return=representation"}
+    r = httpx.patch(f"{SUPABASE_URL}/rest/v1/evaluations?id=eq.{row_id}", headers=hdrs, json=row)
+    if r.status_code not in [200, 204]:
+        return False, f"{r.status_code} — {r.text}"
+    return True, ""
+
+def fetch_submissions(evaluator_name):
+    r = httpx.get(
+        f"{SUPABASE_URL}/rest/v1/evaluations?evaluator_name=eq.{evaluator_name}&select=*",
+        headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"})
+    if r.status_code == 200:
+        return {s["video_name"]: s for s in r.json()}
+    return {}
+
+for k, v in {"page":"login","evaluator":{},"current_video":0,"submissions":{}}.items():
     if k not in st.session_state: st.session_state[k] = v
 
 def login_page():
@@ -77,8 +97,9 @@ def login_page():
         <p style="font-size:0.95rem;margin:0">
         Thank you for participating in this clinical evaluation study. You will be presented with
         <b>17 endoscopic surgical videos</b>, each displayed as a side-by-side comparison
-        of the <b>original</b> (left) and <b>processed</b> (right) versions. Please rate the 
-        <b>processed video</b> on five clinical criteria.
+        of the <b>original</b> (left) and <b>processed</b> (right) versions. Please rate the
+        <b>processed video</b> on five clinical criteria.<br><br>
+        💾 Your progress is <b>saved automatically</b> — you can close the browser and resume later by logging in with the same name.
         </p></div>""", unsafe_allow_html=True)
 
         with st.form("login", border=True):
@@ -103,7 +124,21 @@ def login_page():
                         "name": name.strip(), "specialty": specialty,
                         "experience": experience.strip(), "institution": institution.strip(),
                         "timestamp": datetime.now().isoformat()}
-                    st.session_state.page = "instructions"
+                    # Fetch existing submissions
+                    st.session_state.submissions = fetch_submissions(name.strip())
+                    n_done = len(st.session_state.submissions)
+                    if n_done > 0:
+                        st.session_state.page = "evaluate"
+                        # Jump to first incomplete video
+                        vids = list(VIDEOS.keys())
+                        for i, v in enumerate(vids):
+                            if v not in st.session_state.submissions:
+                                st.session_state.current_video = i
+                                break
+                        else:
+                            st.session_state.current_video = 0
+                    else:
+                        st.session_state.page = "instructions"
                     st.rerun()
 
 def instructions_page():
@@ -123,6 +158,7 @@ def instructions_page():
         <p><span class="step-num">2</span> Watch the full video, then rate the <b>processed version</b>
         on five clinical criteria using a 1–5 scale.</p>
         <p><span class="step-num">3</span> Indicate your <b>overall preference</b> for clinical use.</p>
+        <p><span class="step-num">4</span> You can <b>navigate freely</b> between videos and <b>resume later</b>.</p>
         </div>""", unsafe_allow_html=True)
 
         st.markdown("""<div class="info-card">
@@ -145,24 +181,59 @@ def instructions_page():
 def evaluation_page():
     vids = list(VIDEOS.keys())
     idx = st.session_state.current_video
-    if idx >= len(vids):
-        st.session_state.page = "thankyou"
-        st.rerun()
-        return
-
     vn = vids[idx]
     vid = VIDEOS[vn]
-    pct = idx / len(vids)
+    subs = st.session_state.submissions
+    n_done = len(subs)
+    existing = subs.get(vn, {})
 
+    # Header
+    pct = n_done / len(vids)
     st.markdown(f"""<div class="header-bar">
         <span style="font-size:1.1rem">
             Video <b>{idx+1}</b> of {len(vids)} &nbsp;&middot;&nbsp;
             <span style="background:rgba(255,255,255,.15);padding:3px 12px;border-radius:20px;font-size:0.9rem">{vid["category"]}</span>
+            {"&nbsp; ✅ <span style='font-size:0.8rem'>rated</span>" if vn in subs else ""}
         </span>
-        <span style="font-size:.88rem;opacity:.8">{int(pct*100)}% complete</span>
+        <span style="font-size:.88rem;opacity:.8">{n_done}/{len(vids)} rated ({int(pct*100)}%)</span>
     </div>""", unsafe_allow_html=True)
-    st.progress(pct)
 
+    # Progress pills
+    pills_html = ""
+    for i, v in enumerate(vids):
+        if i == idx:
+            cls = "pill-current"
+        elif v in subs:
+            cls = "pill-done"
+        else:
+            cls = "pill-pending"
+        pills_html += f'<span class="nav-pill {cls}">{i+1}</span>'
+    st.markdown(f'<div style="text-align:center;margin-bottom:10px">{pills_html}</div>', unsafe_allow_html=True)
+
+    # Navigation
+    c1, c2, c3, c4 = st.columns([1,1,2,1])
+    with c1:
+        if st.button("← Previous", disabled=(idx==0), use_container_width=True):
+            st.session_state.current_video = idx - 1
+            st.rerun()
+    with c2:
+        if st.button("Next →", disabled=(idx==len(vids)-1), use_container_width=True):
+            st.session_state.current_video = idx + 1
+            st.rerun()
+    with c3:
+        jump = st.selectbox("Jump to video", range(1, len(vids)+1), index=idx,
+                             format_func=lambda x: f"{'✅' if vids[x-1] in subs else '⭕'} {x}. {VIDEOS[vids[x-1]]['category']}",
+                             label_visibility="collapsed")
+        if jump - 1 != idx:
+            st.session_state.current_video = jump - 1
+            st.rerun()
+    with c4:
+        if n_done == len(vids):
+            if st.button("🎉 Finish", type="primary", use_container_width=True):
+                st.session_state.page = "thankyou"
+                st.rerun()
+
+    # Video
     st.markdown("""<div style="display:flex;justify-content:center;margin-bottom:4px">
         <div style="display:flex;gap:0;font-weight:700;font-size:0.95rem">
             <span style="background:#1a5276;color:white;padding:4px 40px;border-radius:6px 0 0 6px">Original</span>
@@ -171,6 +242,7 @@ def evaluation_page():
     </div>""", unsafe_allow_html=True)
     st.components.v1.iframe(vid["url"], height=380)
 
+    # Form
     with st.form(f"f_{vn}", border=False):
         st.markdown("##### Rate the Processed Video &nbsp; <span style='color:#64748b;font-size:0.8rem'>(1 = Very Poor → 5 = Excellent)</span>", unsafe_allow_html=True)
 
@@ -180,19 +252,25 @@ def evaluation_page():
             with c1:
                 st.markdown(f"**{label}** — *{desc}*")
             with c2:
+                default = existing.get(key, 3)
                 ratings[key] = st.select_slider(
-                    label, [1,2,3,4,5], value=3, key=f"{key}_{vn}", label_visibility="collapsed")
+                    label, [1,2,3,4,5], value=default, key=f"{key}_{vn}", label_visibility="collapsed")
 
         st.markdown("---")
         c1, c2 = st.columns([2, 1])
         with c1:
+            pref_options = ["Original", "Processed", "No Preference"]
+            default_pref = existing.get("preference", "No Preference")
+            default_idx = pref_options.index(default_pref) if default_pref in pref_options else 2
             pref = st.radio("🏆 **Prefer for clinical use?**",
-                            ["Original", "Processed", "No Preference"],
+                            pref_options, index=default_idx,
                             horizontal=True, key=f"p_{vn}")
         with c2:
-            comments = st.text_input("💬 Additional comments or observations", key=f"c_{vn}", placeholder="optional")
+            default_comments = existing.get("comments", "")
+            comments = st.text_input("💬 Additional comments or observations", value=default_comments, key=f"c_{vn}", placeholder="optional")
 
-        if st.form_submit_button("Submit & Continue →", type="primary", use_container_width=True):
+        btn_label = "Update Rating →" if vn in subs else "Submit & Continue →"
+        if st.form_submit_button(btn_label, type="primary", use_container_width=True):
             row = {
                 "evaluator_name": st.session_state.evaluator["name"],
                 "specialty": st.session_state.evaluator["specialty"],
@@ -204,10 +282,22 @@ def evaluation_page():
                 "comments": comments,
                 **ratings
             }
-            ok, err = save_to_supabase(row)
+            if vn in subs:
+                ok, err = update_in_supabase(subs[vn]["id"], row)
+            else:
+                ok, err = save_to_supabase(row)
+
             if ok:
-                st.session_state.responses.append(row)
-                st.session_state.current_video += 1
+                st.session_state.submissions = fetch_submissions(st.session_state.evaluator["name"])
+                # Auto-advance to next unrated
+                if vn not in subs:
+                    for i in range(idx+1, len(vids)):
+                        if vids[i] not in st.session_state.submissions:
+                            st.session_state.current_video = i
+                            break
+                    else:
+                        if len(st.session_state.submissions) == len(vids):
+                            st.session_state.page = "thankyou"
                 st.rerun()
             else:
                 st.error(f"Debug: {err}")
@@ -223,11 +313,15 @@ def thankyou_page():
         st.markdown(f"""<div class="info-card" style="text-align:center;padding:30px">
             <h3 style="margin-top:0">Thank you, {name}.</h3>
             <p style="font-size:1.05rem;color:#475569">
-            Your responses have been recorded successfully.<br>
-            Your expert evaluation is instrumental in advancing endoscopic imaging quality.<br><br>
-            If you have any questions about this study, please contact the research team.
+            You have rated all <b>{len(VIDEOS)}</b> videos.<br>
+            Your responses have been recorded successfully.<br><br>
+            You can return anytime to update your ratings by logging in with the same name.
             </p>
         </div>""", unsafe_allow_html=True)
+        if st.button("← Back to Videos", use_container_width=True):
+            st.session_state.page = "evaluate"
+            st.session_state.current_video = 0
+            st.rerun()
         st.balloons()
 
 {"login":login_page,"instructions":instructions_page,"evaluate":evaluation_page,"thankyou":thankyou_page}[st.session_state.page]()
