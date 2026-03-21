@@ -197,17 +197,19 @@ def evaluation_page():
         <span style="font-size:.88rem;opacity:.8">{n_done}/{len(vids)} rated</span>
     </div>""", unsafe_allow_html=True)
 
-    # Progress pills
-    pills_html = ""
+    # Progress pills as clickable buttons
+    pill_cols = st.columns(len(vids))
     for i, v in enumerate(vids):
-        if i == idx:
-            cls = "pill-current"
-        elif v in subs:
-            cls = "pill-done"
-        else:
-            cls = "pill-pending"
-        pills_html += f'<span class="nav-pill {cls}">{i+1}</span>'
-    st.markdown(f'<div style="text-align:center;margin-bottom:10px">{pills_html}</div>', unsafe_allow_html=True)
+        with pill_cols[i]:
+            if v in subs:
+                label = f"✅{i+1}"
+            elif i == idx:
+                label = f"🔵{i+1}"
+            else:
+                label = f"{i+1}"
+            if st.button(label, key=f"pill_{i}", use_container_width=True):
+                st.session_state.current_video = i
+                st.rerun()
 
     # Navigation
     c1, c2, c3, c4, c5 = st.columns([1,1,2,1,0.7])
