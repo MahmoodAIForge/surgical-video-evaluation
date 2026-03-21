@@ -189,14 +189,7 @@ def evaluation_page():
 
     # Header
     pct = n_done / len(vids)
-    st.markdown(f"""<div class="header-bar">
-        <span style="font-size:1.1rem">
-            Video <b>{idx+1}</b> of {len(vids)} &nbsp;&middot;&nbsp;
-            <span style="background:rgba(255,255,255,.15);padding:3px 12px;border-radius:20px;font-size:0.9rem">{vid["category"]}</span>
-            {"&nbsp; ✅ <span style='font-size:0.8rem'>rated</span>" if vn in subs else ""}
-        </span>
-        <span style="font-size:.88rem;opacity:.8">{n_done}/{len(vids)} rated ({int(pct*100)}%)</span>
-    </div>""", unsafe_allow_html=True)
+    
 
     # Progress pills
     pills_html = ""
