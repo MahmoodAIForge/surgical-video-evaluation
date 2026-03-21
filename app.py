@@ -56,7 +56,9 @@ def save_to_supabase(row):
     hdrs = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
             "Content-Type": "application/json", "Prefer": "return=minimal"}
     r = httpx.post(f"{SUPABASE_URL}/rest/v1/evaluations", headers=hdrs, json=row)
-    return r.status_code in [200, 201]
+    if r.status_code not in [200, 201]:
+        return False, f"{r.status_code} — {r.text}"
+    return True, ""
 
 for k, v in {"page":"login","evaluator":{},"responses":[],"current_video":0}.items():
     if k not in st.session_state: st.session_state[k] = v
@@ -202,12 +204,13 @@ def evaluation_page():
                 "comments": comments,
                 **ratings
             }
-            if save_to_supabase(row):
+            ok, err = save_to_supabase(row)
+            if ok:
                 st.session_state.responses.append(row)
                 st.session_state.current_video += 1
                 st.rerun()
             else:
-                st.error(f"Debug: {r.status_code} — {r.text}")
+                st.error(f"Debug: {err}")
 
 def thankyou_page():
     _, col, _ = st.columns([1,2,1])
