@@ -207,7 +207,7 @@ def evaluation_page():
                 st.session_state.current_video += 1
                 st.rerun()
             else:
-                st.error("Submission failed. Please try again.")
+                st.error(f"Debug: {r.status_code} — {r.text}")
 
 def thankyou_page():
     _, col, _ = st.columns([1,2,1])
