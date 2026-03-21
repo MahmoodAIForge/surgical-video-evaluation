@@ -191,6 +191,12 @@ def evaluation_page():
     pct = n_done / len(vids)
     
 
+    rated_tag = " ✅ rated" if vn in subs else ""
+    st.markdown(f"""<div class="header-bar">
+        <span style="font-size:1.1rem">Video <b>{idx+1}</b> of {len(vids)} · {vid["category"]}{rated_tag}</span>
+        <span style="font-size:.88rem;opacity:.8">{n_done}/{len(vids)} rated</span>
+    </div>""", unsafe_allow_html=True)
+
     # Progress pills
     pills_html = ""
     for i, v in enumerate(vids):
