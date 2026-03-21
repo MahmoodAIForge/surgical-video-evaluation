@@ -211,7 +211,7 @@ def evaluation_page():
     st.markdown(f'<div style="text-align:center;margin-bottom:10px">{pills_html}</div>', unsafe_allow_html=True)
 
     # Navigation
-    c1, c2, c3, c4 = st.columns([1,1,2,1])
+    c1, c2, c3, c4, c5 = st.columns([1,1,2,1,0.7])
     with c1:
         if st.button("← Previous", disabled=(idx==0), use_container_width=True):
             st.session_state.current_video = idx - 1
@@ -232,6 +232,11 @@ def evaluation_page():
             if st.button("🎉 Finish", type="primary", use_container_width=True):
                 st.session_state.page = "thankyou"
                 st.rerun()
+    with c5:
+        if st.button("🚪 Logout", use_container_width=True):
+            for k in list(st.session_state.keys()):
+                del st.session_state[k]
+            st.rerun()
 
     # Video
     st.markdown("""<div style="display:flex;justify-content:center;margin-bottom:4px">
