@@ -105,7 +105,6 @@ def login_page():
         <p><span class="step-num">1</span> Each video shows the <b>original recording</b> (left) alongside the
         <b>processed version</b> (right) in a single side-by-side view.</p>
         <p><span class="step-num">2</span> Watch the full video, then rate the <b>processed version</b> on the clinical criteria provided.</p>
-        
         </div>""", unsafe_allow_html=True)
 
         with st.form("login", border=True):
@@ -165,7 +164,6 @@ def instructions_page():
         <p><span class="step-num">1</span> Each video shows the <b>original recording</b> (left) alongside the
         <b>processed version</b> (right) in a single side-by-side view.</p>
         <p><span class="step-num">2</span> Watch the full video, then rate the <b>processed version</b> on the clinical criteria provided.</p>
-        
         </div>""", unsafe_allow_html=True)
 
         st.markdown("""<div class="info-card">
