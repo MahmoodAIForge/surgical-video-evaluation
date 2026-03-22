@@ -277,7 +277,7 @@ def evaluation_page():
                             horizontal=True, key=f"p_{vn}")
         with c2:
             default_comments = existing.get("comments", "")
-            comments = st.text_input("💬 Additional comments or observations", value=default_comments, key=f"c_{vn}", placeholder="optional")
+            comments = st.text_area("💬 Additional comments or observations", value=default_comments, key=f"c_{vn}", placeholder="optional", height=100)
 
         btn_label = "Update Rating →" if vn in subs else "Submit & Continue →"
         if st.form_submit_button(btn_label, type="primary", use_container_width=True):
