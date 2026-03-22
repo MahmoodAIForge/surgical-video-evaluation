@@ -105,8 +105,7 @@ def login_page():
         <p><span class="step-num">1</span> Each video shows the <b>original recording</b> (left) alongside the
         <b>processed version</b> (right) in a single side-by-side view.</p>
         <p><span class="step-num">2</span> Watch the full video, then rate the <b>processed version</b> on the clinical criteria provided.</p>
-        <p><span class="step-num">3</span> Indicate your <b>overall preference</b> for clinical use.</p>
-        <p><span class="step-num">4</span> You can <b>navigate freely</b> between videos and <b>resume later</b>.</p>
+        
         </div>""", unsafe_allow_html=True)
 
         with st.form("login", border=True):
@@ -166,8 +165,7 @@ def instructions_page():
         <p><span class="step-num">1</span> Each video shows the <b>original recording</b> (left) alongside the
         <b>processed version</b> (right) in a single side-by-side view.</p>
         <p><span class="step-num">2</span> Watch the full video, then rate the <b>processed version</b> on the clinical criteria provided.</p>
-        <p><span class="step-num">3</span> Indicate your <b>overall preference</b> for clinical use.</p>
-        <p><span class="step-num">4</span> You can <b>navigate freely</b> between videos and <b>resume later</b>.</p>
+        
         </div>""", unsafe_allow_html=True)
 
         st.markdown("""<div class="info-card">
