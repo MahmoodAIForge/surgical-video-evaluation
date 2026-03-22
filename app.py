@@ -48,12 +48,10 @@ VIDEOS = {
     "Suturing_110128_VID005": {"url": "https://drive.google.com/file/d/1b3YwJN1BafugBTTODxBr3DBzx9e32ujg/preview", "category": "Suturing"},
 }
 
-CRITERIA = [
-    ("reflection_removal",   "🔆 Reflection Removal",     "How effectively were specular reflections removed?"),
-    ("anatomical_clarity",   "🔬 Anatomical Clarity",      "Can you clearly identify the underlying anatomy after cleaning?"),
-    ("inpainting_quality",   "🩹 Inpainting Quality",      "Are cleaned areas filled with realistic tissue texture?"),
-    ("clinical_confidence",  "✅ Clinical Confidence",      "Would you trust this view for clinical decisions?"),
-    ("overall_quality",      "👁️ Overall Visual Quality",  "Rate the overall visual quality of the processed video"),
+QUESTIONS = [
+    ("reflections_removed",  "Are specular reflections adequately removed?"),
+    ("details_preserved",    "Are anatomical details and instrument edges preserved in the processed regions?"),
+    ("clinical_trust",       "Would you trust this processed video for clinical use?"),
 ]
 
 HDRS = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
@@ -261,18 +259,14 @@ def evaluation_page():
 
     # Form
     with st.form(f"f_{vn}", border=False):
-        st.markdown("##### Rate the Processed Video &nbsp; <span style='color:#64748b;font-size:0.8rem'>(1 = Very Poor → 5 = Excellent)</span>", unsafe_allow_html=True)
+        st.markdown("##### Despecularization Quality Assessment")
 
         ratings = {}
-        for row_start in range(0, len(CRITERIA), 2):
-            row_items = CRITERIA[row_start:row_start+2]
-            cols = st.columns(len(row_items) * 2)
-            for j, (key, label, desc) in enumerate(row_items):
-                with cols[j*2]:
-                    st.markdown(f"**{label}**<br><span style='color:#64748b;font-size:0.8rem'>{desc}</span>", unsafe_allow_html=True)
-                with cols[j*2+1]:
-                    default = existing.get(key, 3)
-                    ratings[key] = st.select_slider(label, [1,2,3,4,5], value=default, key=f"{key}_{vn}", label_visibility="collapsed")
+        for key, question in QUESTIONS:
+            default_val = existing.get(key, "Yes")
+            ratings[key] = st.radio(f"**{question}**", ["Yes", "No"], 
+                index=0 if default_val == "Yes" else 1,
+                horizontal=True, key=f"{key}_{vn}")
 
         st.markdown("---")
         c1, c2 = st.columns([2, 1])
