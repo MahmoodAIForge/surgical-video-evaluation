@@ -253,14 +253,15 @@ def evaluation_page():
         st.markdown("##### Rate the Processed Video &nbsp; <span style='color:#64748b;font-size:0.8rem'>(1 = Very Poor → 5 = Excellent)</span>", unsafe_allow_html=True)
 
         ratings = {}
-        for key, label, desc in CRITERIA:
-            c1, c2 = st.columns([3, 1])
-            with c1:
-                st.markdown(f"**{label}** — *{desc}*")
-            with c2:
-                default = existing.get(key, 3)
-                ratings[key] = st.select_slider(
-                    label, [1,2,3,4,5], value=default, key=f"{key}_{vn}", label_visibility="collapsed")
+        for row_start in range(0, len(CRITERIA), 2):
+            row_items = CRITERIA[row_start:row_start+2]
+            cols = st.columns(len(row_items) * 2)
+            for j, (key, label, desc) in enumerate(row_items):
+                with cols[j*2]:
+                    st.markdown(f"**{label}**<br><span style='color:#64748b;font-size:0.8rem'>{desc}</span>", unsafe_allow_html=True)
+                with cols[j*2+1]:
+                    default = existing.get(key, 3)
+                    ratings[key] = st.select_slider(label, [1,2,3,4,5], value=default, key=f"{key}_{vn}", label_visibility="collapsed")
 
         st.markdown("---")
         c1, c2 = st.columns([2, 1])
