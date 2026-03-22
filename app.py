@@ -96,7 +96,7 @@ def login_page():
         st.markdown("""<div class="info-card">
         <p style="font-size:0.95rem;margin:0">
         Thank you for participating in this clinical evaluation study. You will be presented with
-        <b>17 endoscopic surgical videos</b>, each displayed as a side-by-side comparison
+        <b>endoscopic surgical videos</b>, each displayed as a side-by-side comparison
         of the <b>original</b> (left) and <b>processed</b> (right) versions. Please rate the
         <b>processed video</b> on five clinical criteria.<br><br>
         💾 Your progress is <b>saved automatically</b> — you can close the browser and resume later by logging in with the same name.
@@ -106,8 +106,7 @@ def login_page():
         <h4 style="margin-top:0">Procedure</h4>
         <p><span class="step-num">1</span> Each video shows the <b>original recording</b> (left) alongside the
         <b>processed version</b> (right) in a single side-by-side view.</p>
-        <p><span class="step-num">2</span> Watch the full video, then rate the <b>processed version</b>
-        on five clinical criteria using a 1–5 scale.</p>
+        <p><span class="step-num">2</span> Watch the full video, then rate the <b>processed version</b> on the clinical criteria provided.</p>
         <p><span class="step-num">3</span> Indicate your <b>overall preference</b> for clinical use.</p>
         <p><span class="step-num">4</span> You can <b>navigate freely</b> between videos and <b>resume later</b>.</p>
         </div>""", unsafe_allow_html=True)
@@ -168,8 +167,7 @@ def instructions_page():
         <h4 style="margin-top:0">Procedure</h4>
         <p><span class="step-num">1</span> Each video shows the <b>original recording</b> (left) alongside the
         <b>processed version</b> (right) in a single side-by-side view.</p>
-        <p><span class="step-num">2</span> Watch the full video, then rate the <b>processed version</b>
-        on five clinical criteria using a 1–5 scale.</p>
+        <p><span class="step-num">2</span> Watch the full video, then rate the <b>processed version</b> on the clinical criteria provided.</p>
         <p><span class="step-num">3</span> Indicate your <b>overall preference</b> for clinical use.</p>
         <p><span class="step-num">4</span> You can <b>navigate freely</b> between videos and <b>resume later</b>.</p>
         </div>""", unsafe_allow_html=True)
