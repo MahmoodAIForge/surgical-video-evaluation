@@ -270,7 +270,7 @@ def evaluation_page():
 
         st.markdown("---")
         default_comments = existing.get("comments", "")
-        comments = st.text_area("**Q4. Any observations on artifacts, loss of detail, or other issues?**", 
+        comments = st.text_area("**Any observations on artifacts, loss of detail, or other issues?**", 
                                  value=default_comments, key=f"c_{vn}", 
                                  placeholder="e.g. colour distortion, blurring, flickering, missing details...", height=100)
 
