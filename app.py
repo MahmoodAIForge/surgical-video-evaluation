@@ -102,6 +102,16 @@ def login_page():
         💾 Your progress is <b>saved automatically</b> — you can close the browser and resume later by logging in with the same name.
         </p></div>""", unsafe_allow_html=True)
 
+        st.markdown("""<div class="info-card">
+        <h4 style="margin-top:0">Procedure</h4>
+        <p><span class="step-num">1</span> Each video shows the <b>original recording</b> (left) alongside the
+        <b>processed version</b> (right) in a single side-by-side view.</p>
+        <p><span class="step-num">2</span> Watch the full video, then rate the <b>processed version</b>
+        on five clinical criteria using a 1–5 scale.</p>
+        <p><span class="step-num">3</span> Indicate your <b>overall preference</b> for clinical use.</p>
+        <p><span class="step-num">4</span> You can <b>navigate freely</b> between videos and <b>resume later</b>.</p>
+        </div>""", unsafe_allow_html=True)
+
         with st.form("login", border=True):
             st.markdown("##### Evaluator Information")
             name = st.text_input("Full Name *", placeholder="e.g. Dr. Jane Smith")
@@ -141,7 +151,7 @@ def login_page():
                         else:
                             st.session_state.current_video = 0
                     else:
-                        st.session_state.page = "instructions"
+                        st.session_state.page = "evaluate"
                     st.rerun()
 
 def instructions_page():
