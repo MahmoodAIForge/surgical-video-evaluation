@@ -269,17 +269,10 @@ def evaluation_page():
                 horizontal=True, key=f"{key}_{vn}")
 
         st.markdown("---")
-        c1, c2 = st.columns([2, 1])
-        with c1:
-            pref_options = ["Original", "Processed", "No Preference"]
-            default_pref = existing.get("preference", "No Preference")
-            default_idx = pref_options.index(default_pref) if default_pref in pref_options else 2
-            pref = st.radio("🏆 **Prefer for clinical use?**",
-                            pref_options, index=default_idx,
-                            horizontal=True, key=f"p_{vn}")
-        with c2:
-            default_comments = existing.get("comments", "")
-            comments = st.text_area("💬 Additional comments or observations", value=default_comments, key=f"c_{vn}", placeholder="optional", height=100)
+        default_comments = existing.get("comments", "")
+        comments = st.text_area("**Q4. Any observations on artifacts, loss of detail, or other issues?**", 
+                                 value=default_comments, key=f"c_{vn}", 
+                                 placeholder="e.g. colour distortion, blurring, flickering, missing details...", height=100)
 
         btn_label = "Update Rating →" if vn in subs else "Submit & Continue →"
         if st.form_submit_button(btn_label, type="primary", use_container_width=True):
@@ -291,7 +284,6 @@ def evaluation_page():
                 "institution": st.session_state.evaluator.get("institution",""),
                 "video_name": vn,
                 "category": vid["category"],
-                "preference": pref,
                 "comments": comments,
                 **ratings
             }
