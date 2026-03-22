@@ -96,7 +96,7 @@ def login_page():
         Thank you for participating in this clinical evaluation study. You will be presented with
         <b>endoscopic surgical videos</b>, each displayed as a side-by-side comparison
         of the <b>original</b> (left) and <b>processed</b> (right) versions. Please rate the
-        <b>processed video</b> on five clinical criteria.<br><br>
+        <b>processed video</b> on the clinical criteria below.<br><br>
         💾 Your progress is <b>saved automatically</b> — you can close the browser and resume later by logging in with the same name.
         </p></div>""", unsafe_allow_html=True)
 
