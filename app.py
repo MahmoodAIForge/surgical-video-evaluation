@@ -72,9 +72,9 @@ def update_in_supabase(row_id, row):
         return False, f"{r.status_code} — {r.text}"
     return True, ""
 
-def fetch_submissions(evaluator_name):
+def fetch_submissions(email):
     r = httpx.get(
-        f"{SUPABASE_URL}/rest/v1/evaluations?evaluator_name=eq.{evaluator_name}&select=*",
+        f"{SUPABASE_URL}/rest/v1/evaluations?email=eq.{email}&select=*",
         headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"})
     if r.status_code == 200:
         return {s["video_name"]: s for s in r.json()}
@@ -105,6 +105,7 @@ def login_page():
         with st.form("login", border=True):
             st.markdown("##### Evaluator Information")
             name = st.text_input("Full Name *", placeholder="e.g. Dr. Jane Smith")
+            email = st.text_input("Email *", placeholder="e.g. jane.smith@hospital.org")
             c1, c2 = st.columns(2)
             with c1:
                 specialty = st.selectbox("Specialty *", [
@@ -117,15 +118,17 @@ def login_page():
             if st.form_submit_button("Proceed to Evaluation →", type="primary", use_container_width=True):
                 if not name.strip():
                     st.error("Please provide your full name.")
+                elif not email.strip() or "@" not in email:
+                    st.error("Please provide a valid email address.")
                 elif not experience.strip():
                     st.error("Please indicate your years of experience.")
                 else:
                     st.session_state.evaluator = {
-                        "name": name.strip(), "specialty": specialty,
+                        "name": name.strip(), "email": email.strip().lower(), "specialty": specialty,
                         "experience": experience.strip(), "institution": institution.strip(),
                         "timestamp": datetime.now().isoformat()}
                     # Fetch existing submissions
-                    st.session_state.submissions = fetch_submissions(name.strip())
+                    st.session_state.submissions = fetch_submissions(email.strip().lower())
                     n_done = len(st.session_state.submissions)
                     if n_done > 0:
                         st.session_state.page = "evaluate"
@@ -280,6 +283,7 @@ def evaluation_page():
         if st.form_submit_button(btn_label, type="primary", use_container_width=True):
             row = {
                 "evaluator_name": st.session_state.evaluator["name"],
+                "email": st.session_state.evaluator["email"],
                 "specialty": st.session_state.evaluator["specialty"],
                 "experience": st.session_state.evaluator["experience"],
                 "institution": st.session_state.evaluator.get("institution",""),
