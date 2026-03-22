@@ -97,7 +97,7 @@ def login_page():
         <b>endoscopic surgical videos</b>, each displayed as a side-by-side comparison
         of the <b>original</b> (left) and <b>processed</b> (right) versions. Please rate the
         <b>processed video</b> on the clinical criteria provided.<br><br>
-        💾 Your progress is <b>saved automatically</b> — you can close the browser and resume later by logging in with the same email.
+        💾 Your progress is <b>saved automatically</b> — you can close the browser and resume later by logging in with the same credentials.
         </p></div>""", unsafe_allow_html=True)
 
         st.markdown("""<div class="info-card">
@@ -318,7 +318,7 @@ def thankyou_page():
             <p style="font-size:1.05rem;color:#475569">
             You have rated all <b>{len(VIDEOS)}</b> videos.<br>
             Your responses have been recorded successfully.<br><br>
-            You can return anytime to update your ratings by logging in with the same email.
+            You can return anytime to update your ratings by logging in with the same credentials.
             </p>
         </div>""", unsafe_allow_html=True)
         if st.button("← Back to Videos", use_container_width=True):
