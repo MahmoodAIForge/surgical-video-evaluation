@@ -59,7 +59,7 @@ HDRS = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
 
 def save_to_supabase(row):
     hdrs = {**HDRS, "Prefer": "resolution=merge-duplicates,return=minimal"}
-    r = httpx.post(f"{SUPABASE_URL}/rest/v1/evaluations", headers=hdrs, json=row)
+    r = httpx.post(f"{SUPABASE_URL}/rest/v1/evaluations?on_conflict=email,video_name", headers=hdrs, json=row)
     if r.status_code not in [200, 201]:
         return False, f"{r.status_code} — {r.text}"
     return True, ""
