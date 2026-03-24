@@ -185,6 +185,8 @@ def instructions_page():
             st.rerun()
 
 def evaluation_page():
+    if st.session_state.evaluator.get("email"):
+        st.session_state.submissions = fetch_submissions(st.session_state.evaluator["email"])
     vids = list(VIDEOS.keys())
     idx = st.session_state.current_video
     vn = vids[idx]
