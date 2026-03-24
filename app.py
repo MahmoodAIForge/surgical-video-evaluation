@@ -58,7 +58,8 @@ HDRS = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
         "Content-Type": "application/json", "Prefer": "return=minimal"}
 
 def save_to_supabase(row):
-    r = httpx.post(f"{SUPABASE_URL}/rest/v1/evaluations", headers=HDRS, json=row)
+    hdrs = {**HDRS, "Prefer": "resolution=merge-duplicates,return=minimal"}
+    r = httpx.post(f"{SUPABASE_URL}/rest/v1/evaluations", headers=hdrs, json=row)
     if r.status_code not in [200, 201]:
         return False, f"{r.status_code} — {r.text}"
     return True, ""
